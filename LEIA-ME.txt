@@ -1,0 +1,22 @@
+ESTOQUE DA FARMÁCIA — VERSÃO PWA
+
+ARQUIVOS
+- index.html: aplicativo
+- manifest.webmanifest: identificação e configuração de instalação
+- sw.js: funcionamento offline e cache
+- assets/: bibliotecas de Excel e PDF incluídas localmente
+- icons/: ícones do aplicativo
+
+PUBLICAÇÃO
+1. Publique TODO o conteúdo desta pasta em um endereço HTTPS (por exemplo, GitHub Pages).
+2. Abra o endereço publicado no Safari do iPhone e mantenha a internet ligada durante a primeira abertura para que as bibliotecas externas de Excel/PDF sejam armazenadas no cache.
+3. Toque em Compartilhar > Adicionar à Tela de Início.
+4. Confirme em Adicionar. O ícone aparecerá na tela inicial.
+5. Abra o ícone instalado ao menos uma vez com internet para o cache offline ser preparado.
+
+OBSERVAÇÕES IMPORTANTES
+- A instalação PWA exige HTTPS (GitHub Pages oferece HTTPS).
+- Os dados são armazenados no armazenamento local do navegador/aplicativo deste aparelho. Não há sincronização entre aparelhos ou usuários nesta versão.
+- Faça cópias frequentes em Excel pela aba Dados > Baixar cópia em Excel.
+- O primeiro acesso/publicação precisa de internet. Depois que o cache estiver preparado, a interface funciona offline. As bibliotecas externas de Excel/PDF são armazenadas em cache quando carregadas com internet; teste os recursos offline antes do uso real.
+- Se atualizar os arquivos publicados, o service worker atualizará o cache na próxima visita; feche e abra novamente o app se a versão antiga continuar aparecendo.

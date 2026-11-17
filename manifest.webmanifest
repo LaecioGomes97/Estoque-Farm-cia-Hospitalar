@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "Estoque da farmácia",
+  "short_name": "Estoque",
+  "description": "Controle de estoque, lotes, validades e movimentações da farmácia.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2f5f3",
+  "theme_color": "#0e5a52",
+  "icons": [
+    {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+  ]
+}

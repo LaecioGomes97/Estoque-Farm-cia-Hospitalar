@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estoque da farmácia</title>
+<meta name="theme-color" content="#0e5a52">
+<meta name="description" content="Controle offline de estoque, lotes, validades e movimentações da farmácia.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Estoque Farmácia">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="stylesheet" href="">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{--bg:#f2f5f3;--surf:#fff;--ink:#14221f;--mute:#5d6e69;--line:#d3dcd8;--brand:#0e5a52;--brand-ink:#fff;--bad:#c23b2e;--warn:#a86a08;--ok:#1f7a4d;--bad-bg:#fbe9e6;--warn-bg:#fbf0d9;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1917;--surf:#16241f;--ink:#e6efec;--mute:#93a7a1;--line:#2a3d37;--brand:#4fb8a8;--brand-ink:#08201c;--bad:#ff8a7a;--warn:#e5b04f;--ok:#6fd0a0;--bad-bg:#3a1f1b;--warn-bg:#352b12;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1917;--surf:#16241f;--ink:#e6efec;--mute:#93a7a1;--line:#2a3d37;--brand:#4fb8a8;--brand-ink:#08201c;--bad:#ff8a7a;--warn:#e5b04f;--ok:#6fd0a0;--bad-bg:#3a1f1b;--warn-bg:#352b12;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:24px;font-weight:700;margin:0;letter-spacing:-.01em}
+h2{font-size:17px;margin:0 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;font-weight:500;color:var(--mute);cursor:pointer;white-space:nowrap}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--brand);font-weight:600}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.btn{background:var(--brand);color:var(--brand-ink);border:0;border-radius:6px;padding:9px 14px;font-weight:600;cursor:pointer}
+.btn.out{background:var(--surf);color:var(--ink);border:1px solid var(--line)}
+.btn.bad{background:var(--bad);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+input,select{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+.grid{display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:900px){.grid{grid-template-columns:1fr 340px}}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar input{flex:1;min-width:180px;width:auto}
+.chip{border:1px solid var(--line);background:var(--surf);border-radius:99px;padding:5px 12px;cursor:pointer;font-size:13px}
+.chip[aria-pressed=true]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.chip.alert:not([aria-pressed=true]){color:var(--bad);border-color:var(--bad)}
+.scroll{overflow-x:auto;background:var(--surf);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:560px}.urow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}.urow strong{flex:1;min-width:120px}.urow input{width:160px}table.mini{min-width:0;font-size:13px}.mv-e{color:var(--ok)}.mv-s{color:var(--bad)}.mv-a{color:var(--warn)}.mv-e,.mv-s,.mv-a{font-weight:600}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:13px;color:var(--mute);font-weight:600}
+tr:last-child td{border-bottom:0}
+tbody tr[data-id]{cursor:pointer}
+tbody tr[data-id]:hover,tr.sel{background:color-mix(in srgb,var(--brand) 10%,transparent)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.lvl{position:relative;height:8px;background:var(--line);border-radius:4px;min-width:90px}
+.lvl i{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--ok)}
+.lvl b{position:absolute;top:-3px;bottom:-3px;left:50%;width:2px;background:var(--ink)}
+.low .lvl i{background:var(--bad)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:16px;align-self:start}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:8px 0;font-size:14px}
+.facts dt{color:var(--mute)}.facts dd{margin:0;font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.mute{color:var(--mute);font-size:14px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:92vw;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:500;z-index:9;display:none}
+#toast.bad{background:var(--bad);color:#fff}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--surf);color:var(--ink);padding:20px;width:min(360px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.row>div{flex:1;min-width:140px}
+.day{break-inside:avoid;margin-bottom:22px}
+.hidden{display:none!important}
+@media print{body{background:#fff;color:#000}.wrap>*:not(#v-rel),#v-rel .noprint,nav,header{display:none!important}.scroll{border:0}th,td{border:1px solid #999}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Estoque da farmácia</h1>
+  <div class="bar" style="margin:0">
+    <span id="modo" class="tag warn hidden">Modo administrador</span>
+    <button class="btn out" id="btnAdmin">Entrar como administrador</button>
+  </div>
+</header>
+<nav role="tablist">
+  <button role="tab" data-v="est" aria-selected="true">Estoque</button>
+  <button role="tab" data-v="reg" aria-selected="false">Registro</button>
+  <button role="tab" data-v="rel" aria-selected="false">Relatório</button>
+  <button role="tab" data-v="dad" aria-selected="false">Dados</button>
+</nav>
+
+<section id="v-est">
+  <div class="grid">
+    <div>
+      <div class="bar">
+        <input id="q" type="search" placeholder="Buscar medicamento" aria-label="Buscar medicamento">
+        <button class="btn hidden" id="btnNovo">Novo medicamento</button>
+      </div>
+      <div class="bar" id="chips"></div>
+      <div class="scroll"><table><thead><tr><th>Medicamento</th><th>Tipo</th><th class="num">Atual</th><th class="num">Mínimo</th><th>Nível</th><th>Situação</th></tr></thead><tbody id="tb"></tbody></table></div>
+    </div>
+    <aside class="panel" id="panel"></aside>
+  </div>
+</section>
+
+<section id="v-reg" class="hidden">
+  <div class="row" style="margin-bottom:12px">
+    <div><label for="rq">Medicamento</label><input id="rq" type="search"></div>
+    <div><label for="rm">Movimento</label><select id="rm"><option value="">Todos</option><option>ENTRADA</option><option>SAÍDA</option><option>AJUSTE</option></select></div>
+    <div><label for="ri">De</label><input id="ri" type="date"></div>
+    <div><label for="rf">Até</label><input id="rf" type="date"></div>
+  </div>
+  <div class="scroll"><table><thead><tr><th>Data e hora</th><th>Medicamento</th><th>Movimento</th><th class="num">Qtd.</th><th>Lote(s)</th><th>Setor ou origem</th><th>Motivo</th><th>Responsável</th></tr></thead><tbody id="tr"></tbody></table></div>
+  <p class="mute" id="rinfo"></p>
+</section>
+
+<section id="v-rel" class="hidden">
+  <div class="row noprint">
+    <div><label for="pi">Data inicial</label><input id="pi" type="date"></div>
+    <div><label for="pf">Data final</label><input id="pf" type="date"></div>
+    <div style="flex:0"><button class="btn" id="btnRel">Gerar relatório</button></div>
+  </div>
+  <p class="mute noprint">Para um relatório diário, use a mesma data nos dois campos.</p>
+  <div class="bar noprint hidden" id="relAct"><button class="btn out" id="btnRelPdf">Baixar em PDF</button><button class="btn out" id="btnPrint">Imprimir</button><button class="btn out" id="btnRelX">Baixar em Excel</button></div>
+  <div id="repOut"></div>
+</section>
+
+<section id="v-dad" class="hidden">
+  <div style="max-width:620px">
+    <h2>Trazer a planilha atual</h2>
+    <p class="mute">Escolha o arquivo .xlsx ou .xlsm. A aba “Estoque” (colunas B a E; a F pode ter a validade, ou os lotes se o arquivo veio deste app) e a aba “REGISTRO” (colunas A a F) substituem os dados desta página.</p>
+    <input type="file" id="fx" accept=".xlsx,.xlsm,.xls">
+    <h2 style="margin-top:26px">Levar os dados para o Excel</h2>
+    <p class="mute">Gera um arquivo com as abas “Estoque” e “REGISTRO” no mesmo formato da planilha original.</p>
+    <button class="btn out" id="btnBackup">Baixar cópia em Excel</button>
+    <div id="usr" class="hidden"><h2 style="margin-top:26px">Responsáveis</h2><p class="mute">Quem registra movimentos precisa estar cadastrado e informar a senha a cada registro. Quem for desativado não registra mais, e o nome continua no histórico.</p><div class="row"><div><label for="un">Nome</label><input id="un"></div><div><label for="up">Senha (mínimo 6 caracteres)</label><input id="up" type="password" autocomplete="off"></div><div style="flex:0"><button class="btn" id="btnUser">Cadastrar</button></div></div><div id="ulist" style="margin-top:12px"></div></div>
+    <h2 style="margin-top:26px">Dados salvos neste navegador</h2>
+    <p class="mute" id="dinfo"></p>
+    <button class="btn out hidden" id="btnZero">Apagar tudo e começar do zero</button>
+  </div>
+</section>
+</div>
+
+<dialog id="dlgPin"><form method="dialog" id="fPin">
+  <h2 id="pinT">Senha de administrador</h2>
+  <p class="mute" id="pinD"></p>
+  <input type="password" id="pin" autocomplete="off" aria-label="Senha">
+  <div class="two"><button class="btn out" value="x" type="button" id="pinX">Cancelar</button><button class="btn" id="pinOk">Confirmar</button></div>
+</form></dialog>
+<div id="toast" role="status"></div>
+
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var K="estoque-farmacia-v1";
+var S={meds:[],reg:[],pin:null,users:[],resp:"",mt:"ENTRADA",admin:false,sel:null,form:null,filtro:"todos",delArm:false};
+var rep=[];
+function p2(n){return(n<10?"0":"")+n}
+function dkey(d){var x=new Date(d);return x.getFullYear()+"-"+p2(x.getMonth()+1)+"-"+p2(x.getDate())}
+function br(k){var a=k.split("-");return a[2]+"/"+a[1]+"/"+a[0]}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function save(){try{localStorage.setItem(K,JSON.stringify(S.persist()))}catch(e){}}
+S.persist=function(){return{meds:S.meds,reg:S.reg,pin:S.pin,users:S.users,resp:S.resp}};
+function A(m){return m.lotes.reduce(function(t,l){return t+(+l.qtd)},0)}
+function byVal(a,b){return(a.val||"9999").localeCompare(b.val||"9999")}
+function load(){var ok=false;try{var r=localStorage.getItem(K);if(r){var o=JSON.parse(r);S.meds=o.meds||[];S.reg=o.reg||[];S.pin=o.pin||null;S.resp=o.resp||"";S.users=o.users||[];ok=true}}catch(e){}
+  if(!ok)seed();
+  S.meds.forEach(function(m){if(!m.lotes)m.lotes=[{lote:"S/L",val:m.val||"",qtd:+m.atual||0}];delete m.atual;delete m.val})}
+function seed(){var h=new Date(),d=function(n){return dkey(new Date(h.getTime()+n*864e5))};
+  var L=[["Dipirona 500 mg","Comprimido",40,[["L2406",400,120]]],["Amoxicilina 500 mg","Cápsula",60,[["A118",25,8],["A131",200,10]]],["Paracetamol 750 mg","Comprimido",100,[["P77",300,300]]],["Soro fisiológico 0,9% 500 ml","Frasco",20,[["S09",-5,35]]],["Losartana 50 mg","Comprimido",90,[["LS4",500,90]]]];
+  S.meds=L.map(function(a){return{id:uid(),nome:a[0],tipo:a[1],min:a[2],lotes:a[3].map(function(l){return{lote:l[0],val:d(l[1]),qtd:l[2]}})}});S.reg=[];S.pin=null;S.users=[];S.resp=""}
+function toast(t,bad){var e=$("#toast");e.textContent=t;e.className=bad?"bad":"";e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){e.style.display="none"},4500)}
+var SET=["FARMÁCIA","SALA DE MEDICAÇÃO","LABORATÓRIO","ESTERILIZAÇÃO","ENFERMARIA","SALA VERMELHA","OUTROS"],ORI=["Fornecedor","Doação","Transferência entre unidades","Devolução de setor","Outro"],MOT=["Dispensação","Perda ou quebra","Vencimento ou descarte","Transferência","Devolução ao fornecedor"];
+function opts(a){return a.map(function(x){return"<option>"+x+"</option>"}).join("")}
+function st(m){var s=[],h=dkey(new Date()),lim=dkey(new Date(Date.now()+60*864e5));if(A(m)<+m.min)s.push("baixo");
+  var v=m.lotes.filter(function(l){return l.qtd>0&&l.val});
+  if(v.some(function(l){return l.val<h}))s.push("vencido");if(v.some(function(l){return l.val>=h&&l.val<=lim}))s.push("vence");return s}
+function tags(m){return st(m).map(function(x){return x=="baixo"?'<span class="tag bad">Abaixo do mínimo</span>':x=="vencido"?'<span class="tag bad">Lote vencido</span>':'<span class="tag warn">Lote vence em breve</span>'}).join(" ")||'<span class="mute">Normal</span>'}
+
+/* ---------- Estoque ---------- */
+function renderChips(){var n={todos:S.meds.length,baixo:0,vence:0};S.meds.forEach(function(m){var s=st(m);if(s.indexOf("baixo")>-1)n.baixo++;if(s.indexOf("vence")>-1||s.indexOf("vencido")>-1)n.vence++});
+  var defs=[["todos","Todos"],["baixo","Abaixo do mínimo"],["vence","Vencimento próximo"]];
+  $("#chips").innerHTML=defs.map(function(d){return'<button class="chip'+(d[0]!="todos"&&n[d[0]]?" alert":"")+'" data-f="'+d[0]+'" aria-pressed="'+(S.filtro==d[0])+'">'+d[1]+" ("+n[d[0]]+")</button>"}).join("")}
+function renderStock(){renderChips();var q=$("#q").value.trim().toLowerCase();
+  var L=S.meds.filter(function(m){if(q&&(m.nome+" "+m.tipo).toLowerCase().indexOf(q)<0)return false;var s=st(m);
+    if(S.filtro=="baixo")return s.indexOf("baixo")>-1;if(S.filtro=="vence")return s.indexOf("vence")>-1||s.indexOf("vencido")>-1;return true})
+    .sort(function(a,b){return a.nome.localeCompare(b.nome,"pt-BR")});
+  $("#tb").innerHTML=L.length?L.map(function(m){var a=A(m),pc=m.min>0?Math.min(100,Math.round(a/(m.min*2)*100)):100;
+    return'<tr data-id="'+m.id+'" class="'+(st(m).indexOf("baixo")>-1?"low ":"")+(S.sel==m.id?"sel":"")+'"><td><strong>'+esc(m.nome)+"</strong></td><td>"+esc(m.tipo)+'</td><td class="num">'+a+'</td><td class="num">'+m.min+'</td><td><div class="lvl" title="A marca vertical indica o estoque mínimo"><i style="width:'+pc+'%"></i><b></b></div></td><td>'+tags(m)+"</td></tr>"}).join("")
+    :'<tr><td colspan="6" class="mute">'+(S.meds.length?"Nenhum medicamento encontrado com esses filtros.":"Nenhum medicamento cadastrado. Entre como administrador e use “Novo medicamento”, ou traga a planilha na aba Dados.")+"</td></tr>";
+  renderPanel()}
+function selMed(){return S.meds.filter(function(m){return m.id==S.sel})[0]}
+function renderPanel(){var P=$("#panel"),m=selMed();
+  if(S.form){var f=S.form,e=f.id?m:{nome:"",tipo:"",min:0};
+    P.innerHTML="<h2>"+(f.id?"Editar cadastro":"Novo medicamento")+'</h2><label for="fn">Nome e dosagem</label><input id="fn" value="'+esc(e.nome)+'"><label for="ft">Tipo (comprimido, frasco…)</label><input id="ft" value="'+esc(e.tipo)+'"><label for="fm">Estoque mínimo</label><input id="fm" type="number" min="0" value="'+e.min+'"><p class="mute">O estoque entra pelo registro de entrada, com lote e validade.</p><div class="two"><button class="btn out" id="fCancel">Cancelar</button><button class="btn" id="fSave">Salvar medicamento</button></div>'+(f.id&&!A(m)?'<button class="btn out" id="fDel" style="width:100%;margin-top:8px">'+(S.delArm?"Confirmar exclusão":"Excluir medicamento")+"</button>":"");return}
+  if(!m){P.innerHTML='<h2>Movimentar estoque</h2><p class="mute">Selecione um medicamento na lista para registrar uma entrada ou uma saída.</p>';return}
+  var tp=S.mt=(S.mt=="AJUSTE"&&!S.admin)?"ENTRADA":(S.mt||"ENTRADA");
+  var lt=m.lotes.slice().sort(byVal).map(function(l){var v=l.val&&l.val<dkey(new Date());return"<tr><td>"+esc(l.lote)+"</td><td>"+(l.val?br(l.val):"Sem validade")+(v?' <span class="tag bad">Vencido</span>':"")+'</td><td class="num">'+l.qtd+"</td></tr>"}).join("");
+  var f2="";
+  if(tp=="ENTRADA")f2='<div class="two" style="margin-top:0"><div><label for="ml">Lote</label><input id="ml"></div><div><label for="mv">Validade</label><input id="mv" type="date"></div></div><label for="mq">Quantidade</label><input id="mq" type="number" min="1" step="1" inputmode="numeric"><label for="ms">Origem</label><select id="ms">'+opts(ORI)+'</select><input id="mx" class="hidden" placeholder="Qual origem?" style="margin-top:6px">';
+  else if(tp=="SAÍDA")f2='<label for="mq">Quantidade</label><input id="mq" type="number" min="1" step="1" inputmode="numeric"><label for="ms">Setor de destino</label><select id="ms">'+opts(SET)+'</select><input id="mx" class="hidden" placeholder="Qual setor?" style="margin-top:6px"><label for="mo">Motivo</label><select id="mo">'+opts(MOT)+'</select><p class="mute">A saída usa primeiro o lote que vence antes.</p>';
+  else f2='<label for="ml">Lote</label><select id="ml">'+m.lotes.map(function(l){return"<option>"+esc(l.lote)+"</option>"}).join("")+'</select><label for="mq">Contagem física do lote</label><input id="mq" type="number" min="0" step="1"><label for="mx">Justificativa</label><input id="mx" placeholder="Ex.: divergência na contagem de 17/11">';
+  P.innerHTML="<h2>"+esc(m.nome)+'</h2><dl class="facts"><dt>Tipo</dt><dd>'+esc(m.tipo)+"</dd><dt>Atual</dt><dd>"+A(m)+"</dd><dt>Mínimo</dt><dd>"+m.min+"</dd></dl><div>"+tags(m)+'</div><table class="mini" style="margin-top:10px"><thead><tr><th>Lote</th><th>Validade</th><th class="num">Qtd.</th></tr></thead><tbody>'+(lt||'<tr><td colspan="3" class="mute">Sem estoque.</td></tr>')+'</tbody></table><h3>Registrar movimento</h3>'+respHtml()+'<label for="mt">Movimento</label><select id="mt"><option'+(tp=="ENTRADA"?" selected":"")+'>ENTRADA</option><option'+(tp=="SAÍDA"?" selected":"")+">SAÍDA</option>"+(S.admin?"<option"+(tp=="AJUSTE"?" selected":"")+">AJUSTE</option>":"")+"</select>"+f2+'<button class="btn" id="bGo" style="width:100%;margin-top:14px">Registrar '+tp.toLowerCase()+"</button>"+(S.admin?'<button class="btn out" id="bEdit" style="width:100%;margin-top:8px">Editar cadastro</button>':"")}
+function respHtml(){var U=S.users.filter(function(u){return u.ativo});
+  if(!U.length)return'<p class="mute">Nenhum responsável cadastrado. O administrador faz o cadastro na aba Dados.</p><input id="mr" type="hidden" value="">';
+  return'<label for="mr">Responsável</label><select id="mr">'+U.map(function(u){return'<option value="'+u.id+'"'+(u.id==S.resp?" selected":"")+">"+esc(u.nome)+"</option>"}).join("")+'</select><label for="mp">Senha do responsável</label><input id="mp" type="password" autocomplete="off">'}
+function hash(pw,salt){var e=new TextEncoder();return crypto.subtle.importKey("raw",e.encode(pw),"PBKDF2",false,["deriveBits"]).then(function(k){return crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:e.encode(salt),iterations:100000},k,256)}).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return("0"+x.toString(16)).slice(-2)}).join("")})}
+function mover(){var u=S.users.filter(function(x){return x.id==$("#mr").value&&x.ativo})[0],pw=$("#mp")?$("#mp").value:"";
+  if(!selMed())return toast("Selecione um medicamento.",1);
+  if(!u)return toast("Escolha o responsável.",1);
+  if(!pw)return toast("Informe a senha do responsável.",1);
+  hash(pw,u.salt).then(function(h){if(h!==u.hash){$("#mp").value="";return toast("Senha incorreta.",1)}doMover(u)},function(){toast("Não foi possível verificar a senha neste navegador.",1)})}
+function destino(){var s=$("#ms").value;return s=="Outro"||s=="OUTROS"?$("#mx").value.trim():s}
+function doMover(u){var m=selMed(),tp=S.mt,q=parseFloat($("#mq").value),rs=u.nome,hoje=dkey(new Date());
+  if(!m)return toast("Selecione um medicamento.",1);
+  if(tp=="AJUSTE"?!(q>=0):!(q>0))return toast("Informe a quantidade.",1);
+  var antes=A(m),det="",mot="",dest="",qr=q;
+  if(tp=="ENTRADA"){var lote=$("#ml").value.trim(),val=$("#mv").value;dest=destino();
+    if(!lote||!val)return toast("Informe o lote e a validade.",1);if(/[;@]/.test(lote))return toast("O lote não pode ter ; ou @.",1);
+    if(!dest)return toast("Informe a origem.",1);
+    var L=m.lotes.filter(function(l){return l.lote==lote})[0];
+    if(L){if(L.val!=val)return toast("O lote "+lote+" já existe com validade "+br(L.val)+".",1);L.qtd+=q}else m.lotes.push({lote:lote,val:val,qtd:q});
+    det=lote+"×"+q;mot="Entrada"}
+  else if(tp=="SAÍDA"){mot=$("#mo").value;dest=destino();if(!dest)return toast("Informe o setor.",1);
+    var venc=mot=="Vencimento ou descarte";
+    var pool=m.lotes.filter(function(l){var v=l.val&&l.val<hoje;return l.qtd>0&&(venc?v:!v)}).sort(byVal);
+    var tot=pool.reduce(function(t,l){return t+l.qtd},0);
+    if(tot<q)return toast("Estoque insuficiente "+(venc?"em lotes vencidos":"dentro da validade")+". Disponível: "+tot+".",1);
+    var r=q;pool.forEach(function(l){var t=Math.min(l.qtd,r);l.qtd-=t;r-=t;if(t)det+=(det?"; ":"")+l.lote+"×"+t})}
+  else{var L2=m.lotes.filter(function(l){return l.lote==$("#ml").value})[0];dest=$("#mx").value.trim();
+    if(!L2)return toast("Escolha o lote.",1);if(!dest)return toast("Informe a justificativa.",1);
+    qr=q-L2.qtd;if(!qr)return toast("A contagem é igual ao saldo do lote.",1);
+    det=L2.lote+": "+L2.qtd+" para "+q;mot="Ajuste de inventário";L2.qtd=q}
+  m.lotes=m.lotes.filter(function(l){return l.qtd>0});
+  S.reg.push({ts:new Date().toISOString(),nome:m.nome,tipo:m.tipo,mov:tp,qtd:qr,dest:dest,resp:rs,mot:mot,lotes:det});S.resp=u.id;save();
+  var dep=A(m),msg={ENTRADA:"Entrada",SAÍDA:"Saída",AJUSTE:"Ajuste"}[tp]+" registrada.",bad=false;
+  if(dep<m.min&&tp!="ENTRADA"){msg+=" Atenção: "+m.nome+" ficou abaixo do mínimo ("+dep+" de "+m.min+").";bad=true}
+  if(tp=="ENTRADA"&&antes<m.min&&dep>=m.min)msg+=" "+m.nome+" voltou ao nível normal.";
+  toast(msg,bad);renderAll()}
+
+/* ---------- Registro ---------- */
+function renderReg(){var q=$("#rq").value.trim().toLowerCase(),mv=$("#rm").value,a=$("#ri").value,b=$("#rf").value;
+  var L=S.reg.filter(function(r){var k=dkey(r.ts);return(!q||r.nome.toLowerCase().indexOf(q)>-1)&&(!mv||r.mov==mv)&&(!a||k>=a)&&(!b||k<=b)}).reverse();
+  var C={ENTRADA:"e",SAÍDA:"s",AJUSTE:"a"};
+  $("#tr").innerHTML=L.slice(0,300).map(function(r){return"<tr><td>"+new Date(r.ts).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})+"</td><td>"+esc(r.nome)+'</td><td class="mv-'+C[r.mov]+'">'+r.mov+'</td><td class="num">'+r.qtd+"</td><td>"+esc(r.lotes||"")+"</td><td>"+esc(r.dest)+"</td><td>"+esc(r.mot||"")+"</td><td>"+esc(r.resp||"Não informado")+"</td></tr>"}).join("")||'<tr><td colspan="8" class="mute">Nenhum movimento encontrado.</td></tr>';
+  $("#rinfo").textContent=(L.length>300?"Mostrando os 300 movimentos mais recentes de "+L.length+".":L.length+" movimento(s).")+" Os movimentos não podem ser editados nem apagados; correções entram como ajuste."}
+
+/* ---------- Relatório ---------- */
+function gerarRel(){var a=$("#pi").value,b=$("#pf").value;
+  if(!a||!b)return toast("Informe a data inicial e a final.",1);
+  if(a>b)return toast("A data inicial não pode ser maior que a final.",1);
+  var days={};S.reg.forEach(function(r){var k=dkey(r.ts);if(k<a||k>b)return;var D=days[k]=days[k]||{};var c=[r.nome,r.tipo,r.mov,r.dest].join("\t");D[c]=(D[c]||0)+r.qtd});
+  var ks=Object.keys(days).sort();rep=ks.map(function(k){var o={day:k,ent:[],sai:[],aj:[]};Object.keys(days[k]).forEach(function(c){var p=c.split("\t");(p[2]=="ENTRADA"?o.ent:p[2]=="SAÍDA"?o.sai:o.aj).push([p[0],p[1],p[3],days[k][c]])});return o});
+  if(!rep.length){$("#repOut").innerHTML='<p class="mute">Nenhum registro encontrado no período.</p>';$("#relAct").classList.add("hidden");return}
+  function tb(L,t,c){if(!L.length&&t=="Ajustes")return"";return"<h3>"+t+"</h3>"+(L.length?'<div class="scroll"><table><thead><tr><th>Medicamento</th><th>Tipo</th><th>'+c+'</th><th class="num">Quantidade total</th></tr></thead><tbody>'+L.map(function(r){return"<tr><td>"+esc(r[0])+"</td><td>"+esc(r[1])+"</td><td>"+esc(r[2])+'</td><td class="num">'+r[3]+"</td></tr>"}).join("")+"</tbody></table></div>":'<p class="mute">Sem movimentos.</p>')}
+  $("#repOut").innerHTML=rep.map(function(o){return'<div class="day"><h2>Relatório do dia '+br(o.day)+"</h2>"+tb(o.ent,"Entradas","Origem")+tb(o.sai,"Saídas","Setor")+tb(o.aj,"Ajustes","Justificativa")+"</div>"}).join("");
+  $("#relAct").classList.remove("hidden")}
+
+/* ---------- Excel ---------- */
+function entregar(nome,blob){var local=function(){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();a.remove();toast("Arquivo gerado.")};
+  if(!window.claude||!window.claude.use)return local();
+  window.claude.use("downloads").then(function(d){if(!d)return toast("Download indisponível nesta tela. Abra a página pelo link do artefato.",1);return d.save({filename:nome,data:blob}).then(function(){toast("Arquivo pronto.")},function(e){if(!e||e.code!="declined")toast("Não foi possível salvar o arquivo.",1)})},function(){toast("Download indisponível.",1)})}
+function salvar(nome,wb){try{var buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});entregar(nome,new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}))}catch(e){toast("Não foi possível gerar o arquivo.",1)}}
+function relPdf(){if(!window.jspdf)return toast("A biblioteca de PDF não carregou. Verifique a conexão com a internet.",1);
+  try{var doc=new window.jspdf.jsPDF({unit:"pt",format:"a4"}),y=44;
+  doc.setFontSize(15);doc.text("Relatório de estoque",40,y);doc.setFontSize(10);y+=16;doc.text("Período: "+br(rep[0].day)+" a "+br(rep[rep.length-1].day),40,y);y+=26;
+  rep.forEach(function(o){if(y>700){doc.addPage();y=44}doc.setFontSize(12);doc.text("Relatório do dia "+br(o.day),40,y);y+=10;
+    [["Entradas","Origem",o.ent],["Saídas","Setor",o.sai],["Ajustes","Justificativa",o.aj]].forEach(function(g){if(!g[2].length)return;if(y>740){doc.addPage();y=44}
+      doc.setFontSize(10);doc.text(g[0],40,y+12);
+      doc.autoTable({startY:y+18,head:[["Medicamento","Tipo",g[1],"Qtd. total"]],body:g[2].map(function(r){return[r[0],r[1],r[2],String(r[3])]}),headStyles:{fillColor:[14,90,82]},styles:{fontSize:9},margin:{left:40,right:40}});
+      y=doc.lastAutoTable.finalY+12});y+=12});
+  entregar("Relatorio_Estoque_"+dkey(new Date())+".pdf",doc.output("blob"))}catch(e){toast("Não foi possível gerar o PDF.",1)}}
+function relX(){var A2=[];rep.forEach(function(o){A2.push(["RELATÓRIO DO DIA "+br(o.day)]);[["ENTRADAS","Origem",o.ent],["SAÍDAS","Setor",o.sai],["AJUSTES","Justificativa",o.aj]].forEach(function(g){if(!g[2].length&&g[0]=="AJUSTES")return;A2.push([g[0]]);A2.push(["Medicamento","Tipo",g[1],"Quantidade total"]);g[2].forEach(function(r){A2.push(r)});A2.push([])});A2.push([])});
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(A2),"Relatório");salvar("Relatorio_Estoque_"+dkey(new Date())+".xlsx",wb)}
+function backup(){var wb=XLSX.utils.book_new();
+  var E=[["","Medicamento","Tipo","Atual","Mínimo","Lotes (lote@validade@quantidade)"]].concat(S.meds.map(function(m){return["",m.nome,m.tipo,A(m),+m.min,m.lotes.map(function(l){return l.lote+"@"+l.val+"@"+l.qtd}).join(";")]}));
+  var R=[["Data e hora","Medicamento","Tipo","Movimento","Quantidade","Setor ou origem","Responsável","Motivo","Lotes"]].concat(S.reg.map(function(r){return[new Date(r.ts),r.nome,r.tipo,r.mov,r.qtd,r.dest,r.resp||"",r.mot||"",r.lotes||""]}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(E),"Estoque");XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(R,{cellDates:true}),"REGISTRO");salvar("Estoque_"+dkey(new Date())+".xlsx",wb)}
+function lotesDe(r){var v=r[5],a=+r[3]||0;
+  if(typeof v=="string"&&v.indexOf("@")>-1)return v.split(";").map(function(x){var p=x.split("@");return{lote:p[0],val:p[1]||"",qtd:+p[2]||0}}).filter(function(l){return l.qtd>0});
+  if(v instanceof Date)v=dkey(v);else if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v)))v="";
+  return a>0?[{lote:"S/L",val:v,qtd:a}]:[]}
+function importar(file){var fr=new FileReader();fr.onload=function(){try{var wb=XLSX.read(fr.result,{type:"array",cellDates:true});
+  var we=wb.Sheets["Estoque"],wr=wb.Sheets["REGISTRO"];if(!we)return toast("Não encontrei a aba “Estoque” neste arquivo.",1);
+  var E=XLSX.utils.sheet_to_json(we,{header:1,raw:true,defval:""}).slice(1).filter(function(r){return String(r[1]).trim()});
+  var meds=E.map(function(r){return{id:uid(),nome:String(r[1]).trim(),tipo:String(r[2]).trim(),min:+r[4]||0,lotes:lotesDe(r)}});
+  var reg=[];if(wr){XLSX.utils.sheet_to_json(wr,{header:1,raw:true,defval:""}).slice(1).forEach(function(r){if(!r[1])return;var t=r[0];if(!(t instanceof Date))return;reg.push({ts:t.toISOString(),nome:String(r[1]),tipo:String(r[2]),mov:String(r[3]),qtd:+r[4]||0,dest:String(r[5]),resp:String(r[6]||""),mot:String(r[7]||""),lotes:String(r[8]||"")})})}
+  S.meds=meds;S.reg=reg;S.sel=null;save();renderAll();toast("Importados "+meds.length+" medicamentos e "+reg.length+" movimentos.")}catch(e){toast("Não consegui ler este arquivo.",1)}};fr.readAsArrayBuffer(file)}
+
+/* ---------- Responsáveis ---------- */
+function renderUsers(){$("#ulist").innerHTML=S.users.length?S.users.map(function(u){return'<div class="urow"><strong>'+esc(u.nome)+(u.ativo?"":' <span class="tag warn">Desativado</span>')+'</strong><input type="password" placeholder="Nova senha" aria-label="Nova senha de '+esc(u.nome)+'" autocomplete="off"><button class="btn out" data-uact="pw" data-uid="'+u.id+'">Trocar senha</button><button class="btn out" data-uact="tog" data-uid="'+u.id+'">'+(u.ativo?"Desativar":"Reativar")+"</button></div>"}).join(""):'<p class="mute">Nenhum responsável cadastrado.</p>'}
+function novoUser(){var n=$("#un").value.trim(),p=$("#up").value;
+  if(!n)return toast("Informe o nome do responsável.",1);if(p.length<6)return toast("A senha precisa ter pelo menos 6 caracteres.",1);
+  if(S.users.some(function(u){return u.nome.toLowerCase()==n.toLowerCase()}))return toast("Já existe um responsável com esse nome.",1);
+  var salt=uid()+uid();hash(p,salt).then(function(h){S.users.push({id:uid(),nome:n,salt:salt,hash:h,ativo:true});save();$("#un").value=$("#up").value="";renderUsers();renderPanel();toast("Responsável cadastrado.")},function(){toast("Não foi possível cadastrar neste navegador.",1)})}
+function userAct(b){var u=S.users.filter(function(x){return x.id==b.dataset.uid})[0];if(!u)return;
+  if(b.dataset.uact=="tog"){u.ativo=!u.ativo;save();renderUsers();renderPanel();return toast(u.ativo?"Responsável reativado.":"Responsável desativado.")}
+  var p=b.closest(".urow").querySelector("input").value;if(p.length<6)return toast("A nova senha precisa ter pelo menos 6 caracteres.",1);
+  var salt=uid()+uid();hash(p,salt).then(function(h){u.salt=salt;u.hash=h;save();renderUsers();toast("Senha alterada.")},function(){toast("Não foi possível alterar a senha.",1)})}
+
+/* ---------- Administrador ---------- */
+function pedirPin(){var novo=!S.pin;$("#pinT").textContent=novo?"Criar senha de administrador":"Senha de administrador";$("#pinD").textContent=novo?"Escolha uma senha para liberar o cadastro de medicamentos. Ela fica salva só neste navegador e não substitui um controle de acesso real.":"";$("#pin").value="";$("#dlgPin").showModal();$("#pin").focus()}
+function setAdmin(v){S.admin=v;S.form=null;$("#btnAdmin").textContent=v?"Sair do modo administrador":"Entrar como administrador";$("#modo").classList.toggle("hidden",!v);$("#btnNovo").classList.toggle("hidden",!v);$("#btnZero").classList.toggle("hidden",!v);$("#usr").classList.toggle("hidden",!v);renderUsers();renderStock()}
+
+function renderAll(){renderStock();renderReg();$("#dinfo").textContent=S.meds.length+" medicamentos e "+S.reg.length+" movimentos guardados neste navegador. Faça uma cópia em Excel com frequência."}
+function show(v){["est","reg","rel","dad"].forEach(function(x){$("#v-"+x).classList.toggle("hidden",x!=v)});document.querySelectorAll("nav button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.v==v)});if(v=="reg")renderReg()}
+
+/* ---------- Eventos ---------- */
+document.addEventListener("click",function(e){var t=e.target,r;
+  if(r=t.closest("nav button"))return show(r.dataset.v);
+  if(r=t.closest("[data-uact]"))return userAct(r);
+  if(r=t.closest(".chip"))return(S.filtro=r.dataset.f,renderStock());
+  if(r=t.closest("#tb tr[data-id]")){S.sel=r.dataset.id;S.form=null;S.delArm=false;return renderStock()}
+  switch(t.id){
+   case"bGo":return mover();
+   case"bEdit":S.form={id:S.sel};S.delArm=false;return renderPanel();
+   case"btnNovo":S.form={};S.delArm=false;return renderPanel();
+   case"fCancel":S.form=null;return renderPanel();
+   case"fSave":var n=$("#fn").value.trim();if(!n)return toast("Informe o nome do medicamento.",1);
+     var o=S.form.id?selMed():{id:uid(),lotes:[]};o.nome=n;o.tipo=$("#ft").value.trim();o.min=Math.max(0,+$("#fm").value||0);
+     if(!S.form.id)S.meds.push(o);S.sel=o.id;S.form=null;save();toast("Medicamento salvo.");return renderAll();
+   case"fDel":if(!S.delArm){S.delArm=true;return renderPanel()}S.meds=S.meds.filter(function(m){return m.id!=S.form.id});S.sel=null;S.form=null;S.delArm=false;save();toast("Medicamento excluído.");return renderAll();
+   case"btnAdmin":if(S.admin)return setAdmin(false);return pedirPin();
+   case"pinX":return $("#dlgPin").close();
+   case"btnUser":return novoUser();
+   case"btnRel":return gerarRel();
+   case"btnPrint":try{window.print()}catch(x){toast("Não foi possível imprimir aqui. Use o download em Excel.",1)}return;
+   case"btnRelX":return relX();
+   case"btnRelPdf":return relPdf();
+   case"btnBackup":return backup();
+   case"btnZero":if(!t.dataset.arm){t.dataset.arm=1;t.textContent="Confirmar: apagar tudo";return}delete t.dataset.arm;t.textContent="Apagar tudo e começar do zero";S.meds=[];S.reg=[];S.sel=null;save();renderAll();return toast("Dados apagados.")}});
+document.addEventListener("change",function(e){var t=e.target;
+  if(t.id=="mt"){S.resp=$("#mr").value.trim();S.mt=t.value;renderPanel()}
+  if(t.id=="ms")$("#mx").classList.toggle("hidden",t.value!="Outro"&&t.value!="OUTROS")});
+$("#fPin").addEventListener("submit",function(e){e.preventDefault();var v=$("#pin").value;
+  if(!v)return;if(!S.pin){S.pin=v;save();$("#dlgPin").close();return setAdmin(true)}
+  if(v==S.pin){$("#dlgPin").close();setAdmin(true)}else{toast("Senha incorreta.",1);$("#pin").value=""}});
+["q"].forEach(function(i){$("#"+i).addEventListener("input",renderStock)});
+["rq","rm","ri","rf"].forEach(function(i){$("#"+i).addEventListener("input",renderReg)});
+$("#fx").addEventListener("change",function(e){if(e.target.files[0])importar(e.target.files[0]);e.target.value=""});
+var h=new Date();$("#pi").value=$("#pf").value=dkey(h);
+load();renderAll();
+})();
+</script>
+<script>
+// Registra o modo PWA. O aplicativo continua funcionando como página normal se SW não estiver disponível.
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function (err) {
+      console.warn('Não foi possível ativar o modo offline:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
